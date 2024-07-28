@@ -740,7 +740,9 @@ class MainWindow(QMainWindow, WindowMixin):
         assert self.beginner()
         self.canvas.set_editing(False)
         self.actions.create.setEnabled(False)
-            
+
+
+
     def density(self):
         # 检查文件后缀并修改为.xml
         xml_file_path = self.file_path
@@ -772,8 +774,8 @@ class MainWindow(QMainWindow, WindowMixin):
                 })
 
             # 找出name属性不为0的物体及其边界框
-            non_zero_objects = [obj for obj in objects if obj['name'] not in {0,"crater"} ]
-            zero_objects = [obj for obj in objects if obj['name'] in {0,"crater"} ]
+            non_zero_objects = [obj for obj in objects if obj['name'] not in {0, "crater"}]
+            zero_objects = [obj for obj in objects if obj['name'] in {0, "crater"}]
 
             # 检查一个边界框是否在另一个边界框内
             def is_within(bbox_inner, bbox_outer):
@@ -787,26 +789,24 @@ class MainWindow(QMainWindow, WindowMixin):
                 bbox = non_zero_obj['bbox']
                 bbox_area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
                 
-                # 统计name属性为0的物体在name属性不为0的物体边界框内的数量
-                zero_within_count = sum(
-                    1 for zero_obj in zero_objects
-                    if is_within(zero_obj['bbox'], bbox)
-                )
+                # 统计name属性为0的物体在name属性不为0的物体边界框内的数量和面积
+                zero_within_count = 0
+                zero_within_area = 0
+                for zero_obj in zero_objects:
+                    if is_within(zero_obj['bbox'], bbox):
+                        zero_within_count += 1
+                        zero_within_area += (zero_obj['bbox'][2] - zero_obj['bbox'][0]) * (zero_obj['bbox'][3] - zero_obj['bbox'][1])
                 
                 # 计算密度
-                density = zero_within_count / bbox_area if bbox_area > 0 else 0
-                final_density = density / non_zero_obj['name']
+                number_density = zero_within_count / bbox_area if bbox_area > 0 else 0
+                area_density = zero_within_area / bbox_area if bbox_area > 0 else 0
+                final_density = number_density / non_zero_obj['name']
+                final_area_density = area_density / non_zero_obj['name']
 
                 # 更新当前非零物体的name属性
-                density_str = f'{non_zero_obj["name"]};密度为={zero_within_count}/{bbox_area}/{non_zero_obj["name"]}={final_density:.2e}'
+                density_str = f'{non_zero_obj["name"]};数量密度={zero_within_count}/{bbox_area}/{non_zero_obj["name"]}={final_density:.2e};面积密度={zero_within_area}/{bbox_area}/{non_zero_obj["name"]}={final_area_density:.2e}'
 
                 non_zero_obj['element'].text = density_str
-                # text = density_str
-                # item = self.current_item()
-                # item.setText(text)
-                # item.setBackground(generate_color_by_text(text))
-                # self.set_dirty()
-                # self.update_combo_box()
 
                 # 输出当前更新的信息
                 print(f'更新区域 {i+1}/{len(non_zero_objects)}: {density_str}')
@@ -820,6 +820,87 @@ class MainWindow(QMainWindow, WindowMixin):
             print(f"XML解析错误: {e}")
         except Exception as e:
             print(f"发生错误: {e}")
+
+            
+    # def density(self):
+    #     # 检查文件后缀并修改为.xml
+    #     xml_file_path = self.file_path
+    #     base, ext = os.path.splitext(xml_file_path)
+    #     xml_file_path = base + '.xml'
+        
+    #     try:
+    #         # 读取并解析XML文件
+    #         tree = ET.parse(xml_file_path)
+    #         root = tree.getroot()
+
+    #         # 提取边界框和name属性
+    #         objects = []
+    #         for obj in root.findall('object'):
+    #             obj_name = obj.find('name').text.split(";")[0]
+    #             try:
+    #                 name = int(obj_name)
+    #             except ValueError:
+    #                 continue  # 如果name无法转换为int，则跳过
+                
+    #             xmin = int(obj.find('bndbox/xmin').text)
+    #             ymin = int(obj.find('bndbox/ymin').text)
+    #             xmax = int(obj.find('bndbox/xmax').text)
+    #             ymax = int(obj.find('bndbox/ymax').text)
+    #             objects.append({
+    #                 'name': name,
+    #                 'bbox': (xmin, ymin, xmax, ymax),
+    #                 'element': obj.find('name')
+    #             })
+
+    #         # 找出name属性不为0的物体及其边界框
+    #         non_zero_objects = [obj for obj in objects if obj['name'] not in {0,"crater"} ]
+    #         zero_objects = [obj for obj in objects if obj['name'] in {0,"crater"} ]
+
+    #         # 检查一个边界框是否在另一个边界框内
+    #         def is_within(bbox_inner, bbox_outer):
+    #             return (bbox_outer[0] <= bbox_inner[0] <= bbox_outer[2] and
+    #                     bbox_outer[1] <= bbox_inner[1] <= bbox_outer[3] and
+    #                     bbox_outer[0] <= bbox_inner[2] <= bbox_outer[2] and
+    #                     bbox_outer[1] <= bbox_inner[3] <= bbox_outer[3])
+
+    #         # 计算并更新每个name属性不为0的区域的密度
+    #         for i, non_zero_obj in enumerate(non_zero_objects):
+    #             bbox = non_zero_obj['bbox']
+    #             bbox_area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
+                
+    #             # 统计name属性为0的物体在name属性不为0的物体边界框内的数量
+    #             zero_within_count = sum(
+    #                 1 for zero_obj in zero_objects
+    #                 if is_within(zero_obj['bbox'], bbox)
+    #             )
+                
+    #             # 计算密度
+    #             density = zero_within_count / bbox_area if bbox_area > 0 else 0
+    #             final_density = density / non_zero_obj['name']
+
+    #             # 更新当前非零物体的name属性
+    #             density_str = f'{non_zero_obj["name"]};密度为={zero_within_count}/{bbox_area}/{non_zero_obj["name"]}={final_density:.2e}'
+
+    #             non_zero_obj['element'].text = density_str
+    #             # text = density_str
+    #             # item = self.current_item()
+    #             # item.setText(text)
+    #             # item.setBackground(generate_color_by_text(text))
+    #             # self.set_dirty()
+    #             # self.update_combo_box()
+
+    #             # 输出当前更新的信息
+    #             print(f'更新区域 {i+1}/{len(non_zero_objects)}: {density_str}')
+
+    #         # 保存修改后的XML文件
+    #         tree.write(xml_file_path, encoding='utf-8', xml_declaration=True)
+
+    #         print(f'所有区域密度计算并更新完成。')
+
+    #     except ET.ParseError as e:
+    #         print(f"XML解析错误: {e}")
+    #     except Exception as e:
+    #         print(f"发生错误: {e}")
 
 
         
